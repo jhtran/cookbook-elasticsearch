@@ -7,6 +7,36 @@
 # processname: elasticsearch
 # config:      <%= node[:elasticsearch][:path][:conf] %>/elasticsearch.yml
 
+# JVM Configuration for ElasticSearch
+# ===================================
+# See <https://github.com/elasticsearch/elasticsearch/blob/master/bin/elasticsearch.in.sh>
+#
+
+<%= "JAVA_HOME='#{node.elasticsearch[:java_home]}'\n" if node.elasticsearch[:java_home] -%>
+export ES_HOME='<%= "#{node.elasticsearch[:dir]}/elasticsearch" %>'
+export ES_CLASSPATH=$ES_CLASSPATH:$ES_HOME/lib/*:$ES_HOME/lib/sigar/*
+export ES_HEAP_SIZE=<%= node.elasticsearch[:allocated_memory] %>
+
+export ES_JAVA_OPTS="
+  -server
+  -Djava.net.preferIPv4Stack=true
+  -Des.config=<%= node.elasticsearch[:path][:conf] %>/elasticsearch.yml
+  -Xms<%= node.elasticsearch[:allocated_memory] %>
+  -Xmx<%= node.elasticsearch[:allocated_memory] %>
+  -Xss<%= node.elasticsearch[:thread_stack_size] %>
+  -XX:+UseParNewGC
+  -XX:+UseConcMarkSweepGC
+  -XX:CMSInitiatingOccupancyFraction=75
+  -XX:+UseCMSInitiatingOccupancyOnly
+  -XX:+HeapDumpOnOutOfMemoryError
+<% if node.elasticsearch[:jmx] %>
+  -Dcom.sun.management.jmxremote.ssl=false
+  -Dcom.sun.management.jmxremote.authenticate=false
+  -Dcom.sun.management.jmxremote.port=3333
+  -Djava.rmi.server.hostname=<%= node[:ipaddress] %>
+<% end %>
+"
+
 # Source networking configuration
 #
 if [ -f /etc/sysconfig/network ]; then source /etc/sysconfig/network; fi
